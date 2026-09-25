@@ -8,7 +8,8 @@ export const config = {
     social: {
         github: "shivam01112",
         email: "negishivam066@gmail.com",
-        location: "New Delhi, India"
+        location: "New Delhi, India",
+        timezone: "Asia/Kolkata"
     },
     about: {
         title: "About Me",
