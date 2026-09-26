@@ -77,7 +77,11 @@ const Work = () => {
                   </div>
                 </div>
                 <h4>Tools and features</h4>
-                <p>{project.technologies}</p>
+                <div className="work-tags">
+                  {project.technologies.split(",").map((tech) => (
+                    <span key={tech}>{tech.trim()}</span>
+                  ))}
+                </div>
               </div>
               <WorkImage image={project.image} alt={project.title} link={project.link} />
             </div>
