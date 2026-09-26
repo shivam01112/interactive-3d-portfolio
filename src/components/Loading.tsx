@@ -1,92 +1,106 @@
 import { useEffect, useState } from "react";
 import "./styles/Loading.css";
 import { useLoading } from "../context/LoadingProvider";
+import { config } from "../config";
 
-import Marquee from "react-fast-marquee";
+const STATUS = [
+  "Warming up the pixels",
+  "Loading the 3D scene",
+  "Polishing interactions",
+  "Almost there",
+];
 
 const Loading = ({ percent }: { percent: number }) => {
   const { setIsLoading } = useLoading();
   const [loaded, setLoaded] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [clicked, setClicked] = useState(false);
+  const [exiting, setExiting] = useState(false);
 
-  if (percent >= 100) {
-    setTimeout(() => {
-      setLoaded(true);
-      setTimeout(() => {
-        setIsLoaded(true);
-      }, 1000);
-    }, 600);
-  }
+  const value = Math.min(100, Math.max(0, percent));
+  const status = value >= 100 ? "Welcome" : STATUS[Math.min(STATUS.length - 1, Math.floor(value / 26))];
 
   useEffect(() => {
-    import("./utils/initialFX").then((module) => {
-      if (isLoaded) {
-        setClicked(true);
-        setTimeout(() => {
-          if (module.initialFX) {
-            module.initialFX();
-          }
-          setIsLoading(false);
-        }, 900);
-      }
-    });
-  }, [isLoaded]);
+    if (value < 100 || loaded) return;
+    const t = setTimeout(() => setLoaded(true), 500);
+    return () => clearTimeout(t);
+  }, [value, loaded]);
 
-  function handleMouseMove(e: React.MouseEvent<HTMLElement>) {
-    const { currentTarget: target } = e;
-    const rect = target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    target.style.setProperty("--mouse-x", `${x}px`);
-    target.style.setProperty("--mouse-y", `${y}px`);
-  }
+  useEffect(() => {
+    if (!loaded) return;
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    import("./utils/initialFX").then((module) => {
+      if (cancelled) return;
+      timers.push(
+        setTimeout(() => setExiting(true), 700),
+        setTimeout(() => {
+          module.initialFX?.();
+          setIsLoading(false);
+        }, 1700)
+      );
+    });
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, [loaded, setIsLoading]);
+
+  const digits = String(value).padStart(3, "0").split("");
 
   return (
-    <>
-      <div className="loading-header">
-        <a href="/#" className="loader-title" data-cursor="disable">
-          ShivamNegi
-        </a>
-        <div className={`loaderGame ${clicked && "loader-out"}`}>
-          <div className="loaderGame-container">
-            <div className="loaderGame-in">
-              {[...Array(27)].map((_, index) => (
-                <div className="loaderGame-line" key={index}></div>
-              ))}
-            </div>
-            <div className="loaderGame-ball"></div>
+    <div
+      className={`loader${loaded ? " is-loaded" : ""}${exiting ? " is-exiting" : ""}`}
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+      aria-label="Loading portfolio"
+    >
+      <div className="loader-curtain loader-curtain-top" />
+      <div className="loader-curtain loader-curtain-bottom" />
+
+      <div className="loader-inner">
+        <div className="loader-top">
+          <span className="loader-brand">
+            <i /> {config.developer.fullName}
+          </span>
+          <span className="loader-meta">Portfolio ©{new Date().getFullYear()}</span>
+        </div>
+
+        <div className="loader-center">
+          <div className="loader-orb" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+          <p className="loader-role">{config.developer.title}</p>
+          <div className="loader-count" aria-hidden="true">
+            {digits.map((d, i) => (
+              <span className="loader-digit" key={i}>
+                <span style={{ transform: `translateY(-${Number(d) * 10}%)` }}>
+                  {"0123456789".split("").map((n) => (
+                    <b key={n}>{n}</b>
+                  ))}
+                </span>
+              </span>
+            ))}
+            <em>%</em>
+          </div>
+        </div>
+
+        <div className="loader-bottom">
+          <div className="loader-status">
+            <span key={status}>{status}</span>
+          </div>
+          <div className="loader-bar">
+            <span style={{ transform: `scaleX(${value / 100})` }} />
+          </div>
+          <div className="loader-foot">
+            <span>{config.social.location}</span>
+            <span>Scroll-driven 3D experience</span>
           </div>
         </div>
       </div>
-      <div className="loading-screen">
-        <div className="loading-marquee">
-          <Marquee>
-            <span>&nbsp; Frontend Developer &nbsp;</span> <span>&nbsp; React Developer &nbsp;</span>
-            <span>&nbsp; Frontend Developer &nbsp;</span> <span>&nbsp; React Developer &nbsp;</span>
-          </Marquee>
-        </div>
-        <div
-          className={`loading-wrap ${clicked && "loading-clicked"}`}
-          onMouseMove={(e) => handleMouseMove(e)}
-        >
-          <div className="loading-hover"></div>
-          <div className={`loading-button ${loaded && "loading-complete"}`}>
-            <div className="loading-container">
-              <div className="loading-content">
-                <div className="loading-content-in">
-                  Loading <span>{percent}%</span>
-                </div>
-              </div>
-              <div className="loading-box"></div>
-            </div>
-            <div className="loading-content2">
-              <span>Welcome</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
+    </div>
   );
 };
 
